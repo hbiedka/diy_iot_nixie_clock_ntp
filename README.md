@@ -1,5 +1,4 @@
-# diy_iot_nixie_clock_ntp
-NTP synchronized nixie clock
+# DIY IoT Nixie clock synchronized by NTP
 
 <img src="images/finished.jpg" height="300">
 
