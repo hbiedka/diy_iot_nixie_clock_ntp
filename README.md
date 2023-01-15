@@ -1,7 +1,7 @@
 # diy_iot_nixie_clock_ntp
 NTP synchronized nixie clock
 
-This is a dump of my 6-digit nixie clock project, which
+This is a dump of my 6-digit nixie clock project from 2017, which
 * Shows time in HH:MM:SS
 * Shows date in MM-DD
 * Synchronizes with NTP server via Wi-Fi.
@@ -28,5 +28,5 @@ The code has been written in C++ in Arduino IDE using open-source libraries.
 
 # TODO
 * Provide DCF77 time sync (Hardaware and software)
-
+* Make some remote setup option for ESP module (to configure SSID/password, for now it must be hard-coded before building and flashing).
 
