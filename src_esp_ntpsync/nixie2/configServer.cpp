@@ -142,6 +142,15 @@ bool saveAll(char* buffer) {
   return EEPROM.commit();
 }
 
+bool clearROM() {
+  //for debug purposes
+  for (int i = 0; i < 512; i++) {
+    EEPROM.write(i,0);
+  }
+
+  return EEPROM.commit();
+}
+
 uint8_t parseHttpOutput(String msg) {
 
   char buf[512];
