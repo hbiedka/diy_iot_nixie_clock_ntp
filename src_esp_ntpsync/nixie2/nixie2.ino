@@ -5,22 +5,31 @@
 #include <TimeLib.h>
 #include <Timezone.h>
 
+#include "configServer.h"
+
 // Właściwości NTP
 #define NTP_OFFSET   0
 #define NTP_INTERVAL 60 * 1000
+//todo get it from EEPROM
 #define NTP_ADDRESS  "time.coi.pw.edu.pl"  //adres serwera NTP, adresy innych serwerów można znaleźć w internecie
 
+enum state {
+  INIT,  
+  CONNECTING,
+  START_AP_RQ,
+  RUNNING_AP,
+  CONNECTED,
+  ERROR
+} st;
 
-char ssid[] = "********";       // ssid
-char pass[] = "********";       // hasło
+unsigned long long ts = 0;
+unsigned long long stateTs = 0;
+
+char ssid[128], password[128], url[256];
 
 ///bufor ramki rs232
 byte frame[10];
 byte frCnt = 0;
-
-//flaga czekania na odbiór ntp
-boolean waitForReply = 0;
-byte attempt = 0;
 
 //obiekty UDP i protokołu NTP
 WiFiUDP udp;
@@ -29,22 +38,87 @@ NTPClient timeClient(udp, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
 void setup()
 {
   Serial.begin(9600);
+  configInit();
 
-  // Łączenie
-  WiFi.begin(ssid, pass);
-  
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-  }
-  timeClient.begin();
-
-  //komunikat o poprawnym połączeniu
-  Serial.print("ic!\n");
+  st = INIT;
 
 }
 
 void loop()
 {
+  //poll HTTP server
+  if (st == CONNECTED || st == RUNNING_AP) pollServer();
+
+  //run through state machine
+  switch(st) {
+    case INIT:
+      //keep disconnected from 10 secs from startup
+      if (millis() > 10000) {
+        //get data from EEPROM
+        if (getCredentials(ssid,password,url)) {
+
+          //connect do wifi
+          WiFi.mode(WIFI_STA);
+          WiFi.begin(ssid, password);
+          
+          stateTs = millis();
+          st = CONNECTING;
+        } else {
+          //if data corrupted
+          //start access point
+          st = START_AP_RQ;
+        }
+      }
+      break;
+    case CONNECTING:
+
+      //check every 500 ms
+      if (ts < millis()) {
+        ts == millis() + 500;
+
+        if (WiFi.status() == WL_CONNECTED) {
+          Serial.println("[debug] connected");
+
+          timeClient.begin();
+          configServer();
+          st = CONNECTED;
+        } 
+
+        if ( millis() - stateTs > 120000 ) {
+          Serial.println("[debug] timeout");
+          st = START_AP_RQ;          
+        }
+      }
+      break;
+
+    case START_AP_RQ:
+      //run AP
+      Serial.println("[debug] entering AP mode...");
+
+      IPAddress local_IP(192,168,127,2);
+      IPAddress gateway(192,168,127,1);
+      IPAddress subnet(255,255,255,0);
+
+      if (!WiFi.softAPConfig(local_IP, gateway, subnet)) {
+        Serial.println("[debug] error config");
+        st = ERROR;
+        break;
+      }
+
+      Serial.println("[debug] Setting soft-AP ... ");
+      if(WiFi.softAP("nixie_clock")) {
+        Serial.println("[debug] OK");
+
+        configServer();
+        st = RUNNING_AP;
+      } else {
+        Serial.println("[debug] ERROR");
+        st = ERROR;
+
+      }
+      break;
+  }
+
   //odbierz dane
   if (Serial.available() > 0) {
     frame[frCnt] = Serial.read();
@@ -55,6 +129,9 @@ void loop()
         //odebrano zapytanie
         if (frame[0] == 't' && frame[1] == 'i') {
           //odebrano zapytanie o NTP
+
+          //ask only when fully connected
+          if (st != CONNECTED) return;
 
           //aktualizuj dane
           timeClient.update();
@@ -95,6 +172,20 @@ void loop()
           Serial.print(second(ti)); 
           Serial.print("\n");       
         }
+      } 
+      else if( frame[2] == '+') {
+        //command received
+        if (frame[0] == 'a' && frame[1] == 'p') {
+          //run AP mode
+          if (st == INIT || st == CONNECTED) st = START_AP_RQ;
+          Serial.print("ok\n");
+        }
+        else if (frame[0] == 'c' && frame[1] == 'r') {
+          //run AP mode
+          if (st == INIT || st == CONNECTED || st == RUNNING_AP) 
+            Serial.print( clearROM() ? "ok\n" : "CRe\n");
+        }
+
       }
       //zeruj
       frCnt = 0;
