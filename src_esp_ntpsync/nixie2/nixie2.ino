@@ -1,3 +1,5 @@
+#define DEBUG 1
+
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <NTPClient.h>
@@ -10,8 +12,6 @@
 // Właściwości NTP
 #define NTP_OFFSET   0
 #define NTP_INTERVAL 60 * 1000
-//todo get it from EEPROM
-#define NTP_ADDRESS  "time.coi.pw.edu.pl"  //adres serwera NTP, adresy innych serwerów można znaleźć w internecie
 
 enum state {
   INIT,  
@@ -33,7 +33,7 @@ byte frCnt = 0;
 
 //obiekty UDP i protokołu NTP
 WiFiUDP udp;
-NTPClient timeClient(udp, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
+NTPClient ntp = NTPClient(udp);
 
 void setup()
 {
@@ -79,7 +79,8 @@ void loop()
         if (WiFi.status() == WL_CONNECTED) {
           Serial.println("[debug] connected");
 
-          timeClient.begin();
+          ntp = NTPClient(udp, url, NTP_OFFSET, NTP_INTERVAL);
+          ntp.begin();
           configServer();
           st = CONNECTED;
         } 
@@ -134,10 +135,10 @@ void loop()
           if (st != CONNECTED) return;
 
           //aktualizuj dane
-          timeClient.update();
+          ntp.update();
 
           //pobierz dane w formacie unix (liczba sekund od 1.01.1970, UTC)
-          unsigned long unix =  timeClient.getEpochTime();
+          unsigned long unix =  ntp.getEpochTime();
       
           // biblitoeka time.h wymaga używania formatu zmiennej time_t, dlatego tworzymy dwie zmienne (czas UTC i lokalny)...
           time_t utc, ti;
@@ -181,7 +182,7 @@ void loop()
           Serial.print("ok\n");
         }
         else if (frame[0] == 'c' && frame[1] == 'r') {
-          //run AP mode
+          //clear ROM
           if (st == INIT || st == CONNECTED || st == RUNNING_AP) 
             Serial.print( clearROM() ? "ok\n" : "CRe\n");
         }
