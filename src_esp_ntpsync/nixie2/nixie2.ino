@@ -1,4 +1,4 @@
-#define DEBUG 1
+#define DEBUG 0
 
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
@@ -77,16 +77,22 @@ void loop()
         ts == millis() + 500;
 
         if (WiFi.status() == WL_CONNECTED) {
+#if DEBUG
           Serial.println("[debug] connected");
-
+#endif
           ntp = NTPClient(udp, url, NTP_OFFSET, NTP_INTERVAL);
           ntp.begin();
           configServer();
+
+          Serial.print("ic!\n");
+
           st = CONNECTED;
         } 
 
         if ( millis() - stateTs > 120000 ) {
+#if DEBUG
           Serial.println("[debug] timeout");
+#endif
           st = START_AP_RQ;          
         }
       }
@@ -94,26 +100,36 @@ void loop()
 
     case START_AP_RQ:
       //run AP
+#if DEBUG
       Serial.println("[debug] entering AP mode...");
+#endif
 
       IPAddress local_IP(192,168,127,2);
       IPAddress gateway(192,168,127,1);
       IPAddress subnet(255,255,255,0);
 
       if (!WiFi.softAPConfig(local_IP, gateway, subnet)) {
+#if DEBUG
         Serial.println("[debug] error config");
+#endif
         st = ERROR;
         break;
       }
 
+#if DEBUG
       Serial.println("[debug] Setting soft-AP ... ");
+#endif
       if(WiFi.softAP("nixie_clock")) {
-        Serial.println("[debug] OK");
 
+#if DEBUG
+        Serial.println("[debug] OK");
+#endif
         configServer();
         st = RUNNING_AP;
       } else {
+#if DEBUG
         Serial.println("[debug] ERROR");
+#endif
         st = ERROR;
 
       }
