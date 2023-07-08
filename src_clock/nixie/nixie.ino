@@ -109,9 +109,7 @@ void setup() {
   day = 1;
   month = 1;
 
-  //procedury startowe
-    delay(500);
-    Serial.print("ti?");
+  delay(500);
 }
 
 void loop() {
@@ -168,6 +166,7 @@ ISR (TIMER1_COMPA_vect)
       
       //od�wie� dane
       Serial.print(f);
+      Serial.print("\n");
     
     }
   }
@@ -179,7 +178,7 @@ ISR (TIMER1_COMPA_vect)
       //opu�� ramk�
       frCnt = 0;
       dropCnt = 0;
-      Serial.print("FDe");
+      Serial.print("FDe\n");
       
       PLED &= !LED;
     }
@@ -298,7 +297,7 @@ void routine10ms() {
                     //ustaw flag� na synchronizacje
                     sync = 2;
                     //TODO wy�lij komunikat
-                    Serial.print("ti?");
+                    Serial.print("ti?\n");
                     
                 }
             }
@@ -410,13 +409,13 @@ void uartRead()
           s += fr[21] - '0';
           
           //odpowiedz ok
-                    Serial.print("ok");
+                    Serial.print("ok\n");
           
           //ustaw flag� sync
           sync = 3;
         } else {
           //b��d sk�adni
-          Serial.print("SYe");
+          Serial.print("SYe\n");
         }
       
       }
@@ -432,7 +431,7 @@ void uartRead()
         
         swapTime[fr[1]-'0'] = recv;
         
-        Serial.print("ok");
+        Serial.print("ok\n");
       } 
       else if (fr[0] == 'R') {
         //ustawienie czasu od�wie�ania dowolnego moda
@@ -445,7 +444,7 @@ void uartRead()
         
         refreshTime[fr[1]-'0'] = recv;
         
-        Serial.print("ok");
+        Serial.print("ok\n");
       } 
       
       else if (fr[0] == 'A') {
@@ -461,21 +460,25 @@ void uartRead()
         if (mod == md) showText(text[md]);
         
         //TODO
-        Serial.print("ok");
+        Serial.print("ok\n");
       }
       
       else {
                 //nieznane polecenie
-                Serial.print("UCe");
+                Serial.print("UCe\n");
             }
       
       
     }
     else if (fr[2] == '!') {
       //komunikaty, np ic! - uda�o si� po��czy�
+      if (fr[0] == 'i' && fr[1] == 'c') {
+        //ask for a time when connected
+        Serial.print("ti?\n");
+      }      
     } else {
             //nieznane polecenie
-            Serial.print("ECe");
+            Serial.print("ECe\n");
         }
     
     //zeruj
