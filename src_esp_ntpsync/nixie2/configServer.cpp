@@ -36,15 +36,8 @@ void configInit() {
 bool getCredentials(char* ssid, char* password, char* apiEndpoint) {
   //load SSID and password from EEPROM
   loadString(ssid,0,128);
-  Serial.print("EEPROM SSID: ");
-  Serial.println(ssid);
   loadString(password,128,128);
-  Serial.print("EEPROM pass: ");
-  Serial.println(password);
   loadString(apiEndpoint,256,255);
-  Serial.print("API endpoint: ");
-  Serial.println(apiEndpoint);
-
 
   //validate data got from EEPROM
   return (isStringValid(ssid,128) && isStringValid(password,128));
@@ -63,8 +56,6 @@ void configServer() {
   server.on("/", handleRoot);
   server.on("/config", handleConfig);
   server.begin();
-  Serial.println("HTTP server started");
-
 }
 
 void pollServer() {
@@ -142,6 +133,15 @@ bool saveAll(char* buffer) {
   return EEPROM.commit();
 }
 
+bool clearROM() {
+  //for debug purposes
+  for (int i = 0; i < 512; i++) {
+    EEPROM.write(i,0);
+  }
+
+  return EEPROM.commit();
+}
+
 uint8_t parseHttpOutput(String msg) {
 
   char buf[512];
@@ -179,15 +179,12 @@ uint8_t parseHttpOutput(String msg) {
     val = head.substring(pos+1);
 
     if (key.equals("url")) {
-      Serial.println("API key is "+ convertChars(val));
       convertChars(val).toCharArray(ptrApiUrl,256);
     }
     else if (key.equals("ssid")) {
-      Serial.println("SSID is "+val);
       val.toCharArray(ptrSsid,128);
     } 
     else if(key.equals("pass")) {
-      Serial.println("Password is "+val);
       val.toCharArray(ptrPass,128);
     }
 
@@ -210,7 +207,6 @@ uint8_t parseHttpOutput(String msg) {
 //check that string contains only ASCII chars
 bool isStringValid(char* text, uint8_t maxLen) {
   for (uint8_t i = 0; i < maxLen; i++) {
-    //Serial.println(text[i], DEC);
 
     //if string end occured return true if there is not a first char (means empty string)
     if (text[i] == '\0') return (i > 0);
