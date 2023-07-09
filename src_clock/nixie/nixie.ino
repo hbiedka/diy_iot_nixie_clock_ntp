@@ -71,6 +71,7 @@ void send(unsigned char data, unsigned char latch);
 */
 
 unsigned long int milBuf = 0;
+volatile boolean selfTest = 0;
 
 void setup() {
     
@@ -110,6 +111,13 @@ void setup() {
   month = 1;
 
   delay(500);
+
+  digitalWrite(3,HIGH);
+  if (!digitalRead(3)) {
+    //OK pressed - run selftest
+    doSelfTest();
+  }
+
 }
 
 void loop() {
@@ -123,9 +131,29 @@ void loop() {
   }
 }
 
+void doSelfTest() {
+  selfTest = true;
+
+  for (uint8_t digit = 0; digit < 100; digit+=11) {
+    sendDigits(digit,1);  
+    sendDigits(digit,2);  
+    sendDigits(digit,3);
+
+    delay(700);
+      
+  } 
+
+  Serial.print("ap+\n");
+
+  selfTest = false;
+}
+
 //funkcja wywo�ywana przez przerwanie co 1 sekund�
 ISR (TIMER1_COMPA_vect)
 {
+  //ignore when selftest
+  if (selfTest) return;
+
   //sekundnik
     s++;
   clock(1);
